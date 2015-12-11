@@ -1,0 +1,352 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package projeto_lapr1;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.Formatter;
+import java.util.Scanner;
+
+/**
+ *
+ * @author Ruben
+ */
+public class Projeto_LAPR1 {
+    /**
+     * @param args the command line arguments
+     * @throws java.io.FileNotFoundException
+     */
+    public static void main(String[] args) throws FileNotFoundException {
+
+        boolean isIdeal;
+        int nLinhasficheiro;
+        
+        nLinhasficheiro = numLinhasFicheiro();
+        String[] inputFile = new String[nLinhasficheiro];
+        lerFicheiroInput(inputFile);
+        
+        float [][] tabelaSimplex = new float[nLinhasficheiro][nLinhasficheiro + 2];
+        String[] base = base(nLinhasficheiro);
+        String[] header = header(nLinhasficheiro);
+        int[] indicePivot = new int[2];
+        PreencherMatriz(tabelaSimplex, inputFile, nLinhasficheiro);
+        Formatter write = new Formatter(new File("output.txt"));
+        do {
+
+            escreverOutput(tabelaSimplex, base, header, write);
+            isIdeal = verificarIdeal(tabelaSimplex);
+
+            if (isIdeal == false) {
+                indicePivot[1] = selectEntryValue(tabelaSimplex);
+                indicePivot[0] = selectExitValue(tabelaSimplex, nLinhasficheiro, indicePivot[1], base, header);
+                tabelaSimplex = pivoting(tabelaSimplex, indicePivot);
+            }
+
+        } while (isIdeal == false);
+        write.close();
+    }
+    
+     public static int numLinhasFicheiro() throws FileNotFoundException {
+
+        int nLinhas = 0;
+        String linha, nomeFicheiro = "input.txt";
+
+        Scanner fileIn = new Scanner(new File(nomeFicheiro));
+
+        while (fileIn.hasNext()) {
+
+            linha = fileIn.nextLine();
+
+            if (linha.length() > 0) {
+                nLinhas++;
+            }
+
+        }
+        fileIn.close();
+
+        return nLinhas;
+    }
+
+    public static void escreverOutput(float [][] tabelaSimplex, String[] base, String[] header, Formatter write) {
+
+        for (int i = 0; i < header.length; i++) {
+            System.out.printf("%-3s |", header[i]);
+            write.format("%-3s |", header[i]);
+        }
+        System.out.println("");
+        write.format("%n");
+
+        for (int i = 0; i < tabelaSimplex.length; i++) {
+            for (int j = 0; j < tabelaSimplex[0].length; j++) {
+
+                System.out.printf("%-1.1f |", tabelaSimplex[i][j]);
+                write.format("%-2.1f |", tabelaSimplex[i][j]);
+
+            }
+            if (i > 0) {
+                System.out.printf("%s", base[i]);
+                write.format("%s", base[i]);
+            }
+            System.out.println("");
+            write.format("%n");
+        }
+        System.out.println("");
+        write.format("%n");
+
+    }
+
+    public static String[] base(int nLinhasficheiro) {
+
+        String[] base = new String[nLinhasficheiro];
+        int numSlackVar = 1;
+        base[0] = "base";
+
+        for (int i = 1; i < nLinhasficheiro; i++) {
+            base[i] = "S" + numSlackVar;
+            numSlackVar++;
+        }
+        return base;
+    }
+
+    public static String[] header(int nLinhasficheiro) {
+
+        int numSlackVar = 1;
+        String[] header = new String[nLinhasficheiro + 2];
+
+        header[0] = "X1";
+        header[1] = "X2";
+
+        for (int i = 2; i < header.length - 1; i++) {
+            header[i] = "S" + numSlackVar;
+            numSlackVar++;
+        }
+
+        header[header.length - 1] = "b";
+        return header;
+    }
+
+    //cria o vetor inputFile (a versão digital do ficheiro)
+    public static void lerFicheiroInput(String[] inputFile) throws FileNotFoundException {
+
+        int nLinhas = 0;
+        String linha, nomeFicheiro = "input.txt";
+
+        Scanner fileIn = new Scanner(new File(nomeFicheiro));
+
+        while (fileIn.hasNext()) {
+
+            linha = fileIn.nextLine();
+
+            if (linha.length() > 0 && nLinhas < inputFile.length) {
+
+                inputFile[nLinhas] = linha;
+                nLinhas++;
+            }
+
+        }
+        fileIn.close();
+
+    }
+
+    /**
+     *
+     * @param conditions
+     * @return
+     */
+    public static void PreencherMatriz(float Matriz[][], String[] conditions, int nLinhas) {
+        int k = 1;
+
+        int nvariavel = 2;
+        for (int i = 0; i < nLinhas; i++) {
+            String aux[] = conditions[i].split("[X]");
+            char variavel;
+
+            if (i == 0) {
+                aux[0] = aux[0].replaceAll("\\s+", "");
+                aux[1] = aux[1].replaceAll("\\s+", "");
+                if (aux[0].length() < 3) {
+                    Matriz[0][0] = -1;
+                } else {
+                    aux[0] = aux[0].substring(2, (aux[0].length())).trim();
+                    Matriz[0][0] = Float.parseFloat(aux[0]);
+                    Matriz[0][0] = -Matriz[0][0];
+                }
+
+                if (aux[1].length() < 3) {
+                    Matriz[0][1] = -1;
+                } else {
+                    aux[1] = aux[1].substring(2, (aux[1].length())).trim();
+                    Matriz[0][1] = Float.parseFloat(aux[1]);
+                    Matriz[0][1] = -Matriz[0][1];
+                }
+                for (int j = 2; j < (nLinhas + 2); j++) {
+                    Matriz[0][j] = 0;
+                }
+            } else {
+                aux[0] = aux[0].replaceAll("\\s+", "");
+                aux[1] = aux[1].replaceAll("\\s+", "");
+                aux[2] = aux[2].replaceAll("\\s+", "");
+
+                if (aux[0].length() < 1) {
+                    Matriz[k][0] = 1;
+                } else {
+                    variavel = aux[0].charAt(0);
+                    if (aux[0].length() == 1) {
+
+                        if (variavel == '-') {
+                            Matriz[k][0] = -1;
+                        } else {
+                            aux[0] = aux[0].substring(0, (aux[0].length())).trim();
+                            Matriz[k][0] = Float.parseFloat(aux[0]);
+                        }
+                    } else {
+                        aux[0] = aux[0].substring(0, (aux[0].length())).trim();
+                        Matriz[k][0] = Float.parseFloat(aux[0]);
+                        if (variavel == '-') {
+                            Matriz[k][0] = -Matriz[k][0];
+                        }
+                    }
+                }
+
+                if (aux[1].length() < 3) {
+                    variavel = aux[1].charAt(1);
+                    if (variavel == '-') {
+                        Matriz[k][1] = -1;
+                    } else {
+                        Matriz[k][1] = 1;
+                    }
+                } else {
+                    variavel = aux[1].charAt(1);
+                    aux[1] = aux[1].substring(2, (aux[1].length())).trim();
+                    Matriz[k][1] = Float.parseFloat(aux[1]);
+                    if (variavel == '-') {
+                        Matriz[k][1] = -Matriz[k][1];
+                    }
+                }
+
+                variavel = aux[2].charAt(2);
+                aux[2] = aux[2].substring(3, (aux[2].length()));
+
+                for (int l = 2; l < (nLinhas + 2); l++) {
+                    Matriz[k][l] = 0;
+                }
+
+                Matriz[k][nLinhas + 1] = Float.parseFloat(aux[2]);
+                Matriz[k][nvariavel] = 1;
+
+                if (variavel == '-') {
+                    Matriz[k][nLinhas + 1] = -Matriz[k][nLinhas + 1];
+                }
+                nvariavel++;
+                k++;
+
+            }
+        }
+
+    }
+
+    /**
+     * Verifica qual o valor menor atual na equação principal - valor de entrada
+     *
+     *
+     * @param tabelaSimplex
+     * @return da coluna do valor de entrada
+     */
+    public static int selectEntryValue(float[][] tabelaSimplex) {
+
+        int indiceEntrada = 0;
+        float menor = tabelaSimplex[0][0];
+
+        for (int i = 1; i < tabelaSimplex[0].length - 1; i++) {
+
+            if (tabelaSimplex[0][i] < menor) {
+                menor = tabelaSimplex[0][i];
+                indiceEntrada = i;
+            }
+
+        }
+        return indiceEntrada;
+    }
+
+    /**
+     * Seleciona qual o valor de saída, fazendo o quoeficiente da ultima coluna com a coluna dos numeros da coluna do valor de entrada
+     *
+     *
+     * @param tabelaSimplex
+     * @param nLinhas
+     * @param indiceSaida
+     * @return da linha do valor de saída
+     */
+    public static int selectExitValue(float[][] tabelaSimplex, int nLinhas, int indiceEntrada, String[] base, String[] header) {
+
+        float[] valores = new float[nLinhas];
+        int indiceSaida;
+
+        for (int i = 1; i < valores.length; i++) {
+
+            valores[i] = tabelaSimplex[i][tabelaSimplex[0].length - 1] / tabelaSimplex[i][indiceEntrada];
+
+        }
+        float menorPos = valores[1];
+        indiceSaida = 1;
+
+        for (int i = 1; i < valores.length; i++) {
+
+            if (valores[i] < menorPos && valores[i] > 0) {
+                menorPos = valores[i];
+                indiceSaida = i;
+
+            }
+
+        }
+
+        base[indiceSaida] = header[indiceEntrada];
+
+        return indiceSaida;
+    }
+
+    public static float[][] pivoting(float tabelaSimplex[][], int[] indicePivot) {
+
+        int linhaPivot = indicePivot[0];
+        int colunaPivot = indicePivot[1];
+        float pivot = tabelaSimplex[linhaPivot][colunaPivot];
+        float[][] matrizCondens = new float[tabelaSimplex.length][tabelaSimplex[0].length];
+
+        for (int x = 0; x < tabelaSimplex[0].length; x++) {
+            tabelaSimplex[linhaPivot][x] = tabelaSimplex[linhaPivot][x] / pivot;
+        }
+
+        for (int i = 0; i < tabelaSimplex.length; i++) {
+            if (i != linhaPivot) {
+                for (int j = 0; j < tabelaSimplex[i].length; j++) {
+
+                    matrizCondens[i][j] = tabelaSimplex[i][j] - (tabelaSimplex[i][colunaPivot] * tabelaSimplex[linhaPivot][j]);
+
+                }
+            }
+        }
+        for (int x = 0; x < tabelaSimplex[0].length; x++) {
+            matrizCondens[linhaPivot][x] = tabelaSimplex[linhaPivot][x];
+        }
+
+        return matrizCondens;
+    }
+
+    public static boolean verificarIdeal(float[][] tabelaSimplex) {
+
+        for (int i = 0; i < tabelaSimplex[0].length - 1; i++) {
+            if (tabelaSimplex[0][i] < 0) {
+
+                return false;
+
+            }
+
+        }
+
+        return true;
+    }
+
+}
