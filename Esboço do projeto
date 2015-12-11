@@ -7,6 +7,7 @@ package projeto_lapr1;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.Formatter;
 import java.util.Scanner;
 
 /**
@@ -22,20 +23,54 @@ public class Projeto_LAPR1 {
      * @throws java.io.FileNotFoundException
      */
     public static void main(String[] args) throws FileNotFoundException {
-
+        
+        boolean isIdeal;
         int nLinhasficheiro;
         String[] inputFile = new String[NUMBER_INPUT_LINES];
         nLinhasficheiro = lerFicheiroInput(inputFile);
+        double[][] tabelaSimplex = new double[nLinhasficheiro][nLinhasficheiro + 2];
         String[] base = base(nLinhasficheiro);
         String[] header = header(nLinhasficheiro);
-        int[] indicePivot = new int [2];
-        
-        
-        indicePivot[1]=selectEntryValue(simplexTableau, nLinhasficheiro);
-        indicePivot[0]=selectExitValue(simplexTableau, nLinhasficheiro, indicePivot[1]);
-        
-        
-        
+        int[] indicePivot = new int[2];
+        criarTabelaSimplex(tabelaSimplex, inputFile, nLinhasficheiro);
+        Formatter write = new Formatter(new File("output.txt"));
+        do {
+            
+            escreverOutput(tabelaSimplex, base, header, write);
+            isIdeal = verificarIdeal(tabelaSimplex);
+
+            if (isIdeal == false) {
+                indicePivot[1] = selectEntryValue(tabelaSimplex);
+                indicePivot[0] = selectExitValue(tabelaSimplex, nLinhasficheiro, indicePivot[1]);
+                tabelaSimplex = pivoting(tabelaSimplex, indicePivot);
+            }
+            
+        } while (isIdeal == false);
+        write.close();
+    }
+
+    public static void escreverOutput(double[][] tabelaSimplex, String[] base, String[] header, Formatter write) {
+
+        for (int i = 0; i < header.length; i++) {
+            System.out.printf("%-3s |", header[i]);
+            write.format("%-3s |", header[i]);
+        }
+        System.out.println("");
+
+        for (int i = 0; i < tabelaSimplex.length; i++) {
+            for (int j = 0; j < tabelaSimplex[0].length; j++) {
+                
+                System.out.printf("%-2.1f |", tabelaSimplex[i][j]);
+                write.format("%-2.1f |", tabelaSimplex[i][j]);
+
+            }
+            if (i > 0) {
+                System.out.printf("%s", base[i]);
+                write.format("%s", base[i]);
+            }
+            System.out.println("");
+        }
+
     }
 
     public static String[] base(int nLinhasficheiro) {
@@ -71,7 +106,7 @@ public class Projeto_LAPR1 {
     public static int lerFicheiroInput(String[] inputFile) throws FileNotFoundException {
 
         int nLinhas = 0;
-        String linha, nomeFicheiro = "file.txt";
+        String linha, nomeFicheiro = "input.txt";
 
         Scanner fileIn = new Scanner(new File(nomeFicheiro));
 
@@ -96,11 +131,90 @@ public class Projeto_LAPR1 {
      * @param conditions
      * @return
      */
-    public static void createSimplexTableau(String[] conditions) {
+    public static void criarTabelaSimplex(double[][] tabelaSimplex, String[] inputFile, int nLinhas) {
+        int k = 1;
+
+        int nvariavel = 2;
+        for (int i = 0; i < nLinhas; i++) {
+            String aux[] = inputFile[i].split("[X]");
+            char variavel;
+
+            if (i == 0) {
+                aux[0] = aux[0].replaceAll("\\s+", "");
+                aux[1] = aux[1].replaceAll("\\s+", "");
+                if (aux[0].length() < 3) {
+                    tabelaSimplex[0][0] = 1;
+                } else {
+                    aux[0] = aux[0].substring(2, (aux[0].length())).trim();
+                    tabelaSimplex[0][0] = Long.parseLong(aux[0]);
+                }
+
+                if (aux[1].length() < 3) {
+                    tabelaSimplex[0][1] = 1;
+                } else {
+                    aux[1] = aux[1].substring(2, (aux[1].length())).trim();
+                    tabelaSimplex[0][1] = Long.parseLong(aux[1]);
+                }
+                for (int j = 2; j < (nLinhas + 2); j++) {
+                    tabelaSimplex[0][j] = 0;
+                }
+            } else {
+                aux[0] = aux[0].replaceAll("\\s+", "");
+                aux[1] = aux[1].replaceAll("\\s+", "");
+                aux[2] = aux[2].replaceAll("\\s+", "");
+                
+                if (aux[0].length() < 1) {
+                    tabelaSimplex[k][0] = 1;
+                    variavel='+';
+                } else {
+                    
+                    if(aux[0].charAt(0)== '-' && aux[0].length() == 1 ){
+                    tabelaSimplex[k][0] = -1;
+                    variavel = aux[0].charAt(0);
+                    
+                    }else{
+                    variavel = aux[0].charAt(0);
+                    aux[0] = aux[0].substring(0, (aux[0].length())).trim();
+                    tabelaSimplex[k][0] = Long.parseLong(aux[0]);
+                    }
+                }
+
+                if (variavel == '-') {
+                    tabelaSimplex[k][0] = -tabelaSimplex[k][0];
+                }
+
+                variavel = aux[1].charAt(1);
+                if (aux[1].length() < 3) {
+                    tabelaSimplex[k][1] = 1;
+                } else {
+                    aux[1] = aux[1].substring(2, (aux[1].length())).trim();
+                    tabelaSimplex[k][1] = Long.parseLong(aux[1]);
+                }
+
+                if (variavel == '-') {
+                    tabelaSimplex[k][1] = -tabelaSimplex[k][1];
+                }
+                variavel = aux[2].charAt(2);
+                aux[2] = aux[2].substring(3, (aux[2].length()));
+
+                for (int l = 2; l < (nLinhas + 2); l++) {
+                    tabelaSimplex[k][l] = 0;
+                }
+
+                tabelaSimplex[k][nLinhas + 1] = Long.parseLong(aux[2]);
+                tabelaSimplex[k][nvariavel] = 1;
+
+                if (variavel == '-') {
+                    tabelaSimplex[k][nLinhas + 1] = -tabelaSimplex[k][nLinhas + 1];
+                }
+                nvariavel++;
+                k++;
+
+            }
+        }
 
     }
 
-    
     /**
      * Verifica qual o valor menor atual na equação principal - valor de entrada
      *
@@ -108,9 +222,10 @@ public class Projeto_LAPR1 {
      * @param tabelaSimplex
      * @return da coluna do valor de entrada
      */
-    public static int selectEntryValue(int[][] tabelaSimplex) {
+    public static int selectEntryValue(double[][] tabelaSimplex) {
 
-        int indiceEntrada = 0, menor = tabelaSimplex[0][0];
+        int indiceEntrada = 0;
+        double menor = tabelaSimplex[0][0];
 
         for (int i = 1; i < tabelaSimplex[0].length - 1; i++) {
 
@@ -123,18 +238,16 @@ public class Projeto_LAPR1 {
         return indiceEntrada;
     }
 
-    
     /**
-     * Seleciona qual o valor de saída, fazendo o quoeficiente da ultima coluna com a coluna
-     * dos numeros da coluna do valor de entrada
-     * 
-     * 
+     * Seleciona qual o valor de saída, fazendo o quoeficiente da ultima coluna com a coluna dos numeros da coluna do valor de entrada
+     *
+     *
      * @param tabelaSimplex
      * @param nLinhas
      * @param indiceSaida
      * @return da linha do valor de saída
      */
-    public static int selectExitValue(int[][] tabelaSimplex, int nLinhas, int indiceEntrada) {
+    public static int selectExitValue(double[][] tabelaSimplex, int nLinhas, int indiceEntrada) {
 
         double[] valores = new double[nLinhas];
         int indiceSaida;
@@ -144,48 +257,61 @@ public class Projeto_LAPR1 {
             valores[i] = tabelaSimplex[i][tabelaSimplex[0].length - 1] / tabelaSimplex[i][indiceEntrada];
 
         }
-        double menorPos=valores[1];
-        indiceSaida=1;
+        double menorPos = valores[1];
+        indiceSaida = 1;
 
         for (int i = 1; i < valores.length; i++) {
-        
-            if(valores[i] < menorPos && valores[i] > 0){
-            menorPos=valores[i];
-            indiceSaida=i;
-        
+
+            if (valores[i] < menorPos && valores[i] > 0) {
+                menorPos = valores[i];
+                indiceSaida = i;
+
+            }
+
         }
-        
+
+        return indiceSaida;
     }
-    
-    return indiceSaida;
-    }
-    
-    
-    public static double[][] pivoting(double matriz[][], int[] indicePivot) {
+
+    public static double[][] pivoting(double tabelaSimplex[][], int[] indicePivot) {
 
         int linhaPivot = indicePivot[0];
         int colunaPivot = indicePivot[1];
-        double pivot = matriz[linhaPivot][colunaPivot];
+        double pivot = tabelaSimplex[linhaPivot][colunaPivot];
         double[][] matrizCondens = new double[4][4];
 
-        for (int x = 0; x < matriz[0].length; x++) {
-            matriz[linhaPivot][x] = matriz[linhaPivot][x] / pivot;
+        for (int x = 0; x < tabelaSimplex[0].length; x++) {
+            tabelaSimplex[linhaPivot][x] = tabelaSimplex[linhaPivot][x] / pivot;
         }
 
-        for (int i = 0; i < matriz.length; i++) {
+        for (int i = 0; i < tabelaSimplex.length; i++) {
             if (i != linhaPivot) {
-                for (int j = 0; j < matriz[i].length; j++) {
+                for (int j = 0; j < tabelaSimplex[i].length; j++) {
 
-                    matrizCondens[i][j] = matriz[i][j] - (matriz[i][colunaPivot] * matriz[linhaPivot][j]);
+                    matrizCondens[i][j] = tabelaSimplex[i][j] - (tabelaSimplex[i][colunaPivot] * tabelaSimplex[linhaPivot][j]);
 
                 }
             }
         }
-        for (int x = 0; x < matriz[0].length; x++) {
-            matrizCondens[linhaPivot][x] = matriz[linhaPivot][x];
+        for (int x = 0; x < tabelaSimplex[0].length; x++) {
+            matrizCondens[linhaPivot][x] = tabelaSimplex[linhaPivot][x];
         }
 
         return matrizCondens;
+    }
+
+    public static boolean verificarIdeal(double[][] tabelaSimplex) {
+
+        for (int i = 0; i < tabelaSimplex[0].length - 1; i++) {
+            if (tabelaSimplex[0][i] < 0) {
+
+                return false;
+
+            }
+
+        }
+
+        return true;
     }
 
 }
