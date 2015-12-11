@@ -1,0 +1,319 @@
+package metodo.simplex;
+
+import java.util.Arrays;
+import java.util.Scanner;
+import java.io.FileNotFoundException;
+import java.io.File;
+import java.util.Formatter;
+/**
+ *
+ * @author Joel Pinto
+ */
+public class MetodoSimplex {
+
+    private final static int NUMBER_INPUT_LINES = 10;
+
+    public static void main(String[] args) throws FileNotFoundException {
+        boolean isIdeal;
+        int nLinhas = 0;
+        
+        int linhasiniciais=0;
+        linhasiniciais=LerLinhas();
+        String[] conditions = new String[linhasiniciais];
+        nLinhas = lerFicheiroInput(conditions);
+        float[][] Matriz = new float[nLinhas][nLinhas + 2];
+        int[] indicePivot= new int [2];
+        PreencherMatriz(Matriz, conditions, nLinhas);
+        String[] base = base(nLinhas);
+        String[] header = header(nLinhas);
+        Formatter write = new Formatter(new File("output.txt"));
+        do {
+            
+            escreverOutput(Matriz, base, header, write);
+            isIdeal = verificarIdeal(Matriz);
+
+            if (isIdeal == false) {
+                indicePivot[1] = selectEntryValue(Matriz);
+                indicePivot[0] = selectExitValue(Matriz, nLinhas, indicePivot[1]);
+                Matriz = pivoting(Matriz, indicePivot);
+            }
+            
+        } while (isIdeal == false);
+        write.close();
+    
+        
+    }
+    public static void escreverOutput(float[][] Matriz, String[] base, String[] header, Formatter write) {
+        write.format("%n");
+        System.out.printf("%n");
+        for (int i = 0; i < header.length; i++) {
+            System.out.printf("%-6s |", header[i]);
+            write.format("%-6s |", header[i]);
+        }
+        System.out.println("");
+        write.format("%n");
+        for (int i = 0; i < Matriz.length; i++) {
+            for (int j = 0; j <Matriz[0].length; j++) {
+                
+                System.out.printf("%-6.1f |", Matriz[i][j]);
+                write.format("%-6.1f |", Matriz[i][j]);
+
+            }
+            write.format("%n");
+            if (i > 0) {
+                System.out.printf("%s", base[i]);
+                write.format("%s", base[i]);
+            }
+            System.out.println("");
+        }
+
+    }
+     public static boolean verificarIdeal(float[][] Matriz) {
+
+        for (int i = 0; i < Matriz[0].length - 1; i++) {
+            if (Matriz[0][i] < 0) {
+
+                return false;
+
+            }
+
+        }
+
+        return true;
+    }
+
+    public static int LerLinhas() throws FileNotFoundException{
+        Scanner file1 = new Scanner ( new File("file.txt"));
+        String linha;
+        int linhasiniciais=0;
+        while(file1.hasNext()){
+            linha=file1.nextLine();
+            if(linha.length()>0){
+                linhasiniciais++;
+            }
+        }
+        return linhasiniciais;
+    }
+
+    public static int lerFicheiroInput(String[] conditions) throws FileNotFoundException {
+
+        String linha;
+        String nomeFicheiro = "file.txt";
+
+        Scanner fileIn = new Scanner(new File(nomeFicheiro));
+        int nLinhas = 0;
+
+        while (fileIn.hasNext()) {
+
+            linha = fileIn.nextLine();
+
+            if (linha.length() > 0 && nLinhas < conditions.length) {
+                conditions[nLinhas] = linha;
+                nLinhas++;
+            }
+
+        }
+        fileIn.close();
+        return nLinhas;
+    }
+
+    public static void PreencherMatriz(float Matriz[][], String[] conditions, int nLinhas) {
+        int k = 1;
+
+        int nvariavel = 2;
+        for (int i = 0; i < nLinhas; i++) {
+            String aux[] = conditions[i].split("[X]");
+            char variavel;
+
+            if (i == 0) {
+                aux[0] = aux[0].replaceAll("\\s+", "");
+                aux[1] = aux[1].replaceAll("\\s+", "");
+                if (aux[0].length() < 3) {
+                    Matriz[0][0] = -1;
+                } else {
+                    aux[0] = aux[0].substring(2, (aux[0].length())).trim();
+                    Matriz[0][0] = Float.parseFloat(aux[0]);
+                    Matriz[0][0] = -Matriz[0][0];
+                }
+
+                if (aux[1].length() < 3) {
+                    Matriz[0][1] = -1;
+                } else {
+                    aux[1] = aux[1].substring(2, (aux[1].length())).trim();
+                    Matriz[0][1] = Float.parseFloat(aux[1]);
+                    Matriz[0][1] = -Matriz[0][1];
+                }
+                for (int j = 2; j < (nLinhas + 2); j++) {
+                    Matriz[0][j] = 0;
+                }
+            } else {
+                aux[0] = aux[0].replaceAll("\\s+", "");
+                aux[1] = aux[1].replaceAll("\\s+", "");
+                aux[2] = aux[2].replaceAll("\\s+", "");
+
+                if (aux[0].length() < 1) {
+                    Matriz[k][0] = 1;
+                } else {
+                    variavel = aux[0].charAt(0);
+                    if (aux[0].length() == 1) {
+
+                        if (variavel == '-') {
+                            Matriz[k][0] = -1;
+                        } else {
+                            aux[0] = aux[0].substring(0, (aux[0].length())).trim();
+                            Matriz[k][0] = Float.parseFloat(aux[0]);
+                        }
+                    } else {
+                        aux[0] = aux[0].substring(0, (aux[0].length())).trim();
+                        Matriz[k][0] = Float.parseFloat(aux[0]);
+                        if (variavel == '-') {
+                            Matriz[k][0] = -Matriz[k][0];
+                        }
+                    }
+                }
+
+                if (aux[1].length() < 3) {
+                    variavel = aux[1].charAt(1);
+                    if (variavel == '-') {
+                        Matriz[k][1] = -1;
+                    } else {
+                        Matriz[k][1] = 1;
+                    }
+                } else {
+                    variavel = aux[1].charAt(1);
+                    aux[1] = aux[1].substring(2, (aux[1].length())).trim();
+                    Matriz[k][1] = Float.parseFloat(aux[1]);
+                    if (variavel == '-') {
+                        Matriz[k][1] = -Matriz[k][1];
+                    }
+                }
+
+                String inversa;
+                inversa= aux[2].substring(1,3);
+                aux[2] = aux[2].substring(3, (aux[2].length()));
+
+                for (int l = 2; l < (nLinhas + 2); l++) {
+                    Matriz[k][l] = 0;
+                }
+
+                Matriz[k][nLinhas + 1] = Float.parseFloat(aux[2]);
+                Matriz[k][nvariavel] = 1;
+                if(inversa.equals("=>")){
+                    Matriz[k][nLinhas+1]=-Matriz[k][nLinhas]+1;
+                }
+                
+                nvariavel++;
+                k++;
+
+            }
+        }
+
+    }
+
+    public static String[] base(int nLinhas) {
+
+        String[] base = new String[nLinhas];
+        int numSlackVar = 1;
+        base[0] = "base";
+
+        for (int i = 1; i < nLinhas; i++) {
+            base[i] = "S" + numSlackVar;
+            numSlackVar++;
+        }
+        return base;
+    }
+
+    public static String[] header(int nLinhas) {
+
+        int numSlackVar = 1;
+        String[] header = new String[nLinhas + 2];
+
+        header[0] = "X1";
+        header[1] = "X2";
+
+        for (int i = 2; i < header.length - 1; i++) {
+            header[i] = "S" + numSlackVar;
+            numSlackVar++;
+        }
+
+        header[header.length - 1] = "b";
+
+        return header;
+    }
+
+    public static int selectEntryValue(float[][] Matriz) {
+
+        int indiceEntrada = 0;
+        double menor = Matriz[0][0];
+
+        for (int i = 1; i < Matriz[0].length - 1; i++) {
+
+            if (Matriz[0][i] < menor) {
+                menor = Matriz[0][i];
+                indiceEntrada = i;
+            }
+
+        }
+        return indiceEntrada;
+    }
+
+    public static int selectExitValue(float[][] Matriz, int nLinhas, int indiceEntrada) {
+
+        float[] valores = new float[nLinhas];
+        int indiceSaida;
+
+        for (int i = 1; i < valores.length; i++) {
+
+            valores[i] = Matriz[i][Matriz[0].length - 1] / Matriz[i][indiceEntrada];
+
+        }
+        float menorPos=0;
+        indiceSaida = 1;
+        int nobreak=0;
+        while(menorPos==0){
+           if(valores[nobreak]>0){
+               menorPos=valores[nobreak];
+           }
+          nobreak++;  
+        }
+        for (int i = 1; i <valores.length; i++) {
+
+            if (valores[i] < menorPos && valores[i]>0) {
+                menorPos = valores[i];
+                indiceSaida = i;
+
+            }
+
+        }
+
+        return indiceSaida;
+    }
+
+    public static float[][] pivoting(float Matriz[][], int[] indicePivot) {
+
+        int linhaPivot = indicePivot[0];
+        int colunaPivot = indicePivot[1];
+        double pivot = Matriz[linhaPivot][colunaPivot];
+        float[][] matrizCondens = new float[Matriz.length][Matriz[0].length];
+
+        for (int x = 0; x < Matriz[0].length; x++) {
+            Matriz[linhaPivot][x] = (float) (Matriz[linhaPivot][x] / pivot);
+        }
+
+        for (int i = 0; i < Matriz.length; i++) {
+            if (i != linhaPivot) {
+                for (int j = 0; j < Matriz[i].length; j++) {
+
+                    matrizCondens[i][j] = Matriz[i][j] - (Matriz[i][colunaPivot] * Matriz[linhaPivot][j]);
+
+                }
+            }
+        }
+        for (int x = 0; x < Matriz[0].length; x++) {
+            matrizCondens[linhaPivot][x] = Matriz[linhaPivot][x];
+        }
+
+        return matrizCondens;
+    }
+
+}
