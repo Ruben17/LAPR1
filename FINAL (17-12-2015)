@@ -1,6 +1,27 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package projeto_lapr1;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import static java.lang.System.out;
+import java.util.Formatter;
+import java.util.Scanner;
+
+/**
+ *
+ * @author Ruben
+ */
 public class Projeto_LAPR1 {
 
     /**
+     * @param input_File as linhas do ficheiro de input estão guardadas neste vetor
+     * @param header o cabeçalho da tabela simplex
+     * 
+     * 
      * @param args the command line arguments
      * @throws java.io.FileNotFoundException
      */
@@ -8,22 +29,25 @@ public class Projeto_LAPR1 {
 
         boolean isIdeal;
         int nLinhasficheiro, numIter = 0;
+        
         double [] valoresDaSolucao;
         int[] indicePivot = new int[2];
         nLinhasficheiro = numLinhasFicheiro(args);
         String[] base = base(nLinhasficheiro);
         String[] header = header(nLinhasficheiro);
-        String[] inputFile = new String[nLinhasficheiro];
-        lerFicheiroInput(inputFile, args);
+        String[] input_File = new String[nLinhasficheiro];
+        lerFicheiroInput(input_File, args);
 
         double[][] tabelaSimplex = new double[nLinhasficheiro][nLinhasficheiro + 2];
-        PreencherMatriz(tabelaSimplex, inputFile, nLinhasficheiro);
+        PreencherMatriz(tabelaSimplex, input_File, nLinhasficheiro);
 
+      //Formatter write = new Formatter(new File(args[1]));
         Formatter write = new Formatter(new File("output.txt"));
+        
         do {
-            valoresDaSolucao = extrairSolucaoAtual(tabelaSimplex, inputFile, header, base);
-            escreverOutputToFile(tabelaSimplex, base, header, inputFile, write, numIter, valoresDaSolucao);
-            isIdeal = verificarifIdeal(tabelaSimplex);
+            valoresDaSolucao = extrairSolucaoAtual(tabelaSimplex, input_File, header, base);
+            escreverOutputToFile(tabelaSimplex, base, header, input_File, write, numIter, valoresDaSolucao);
+            isIdeal = verificar_if_Ideal(tabelaSimplex);
 
             if (isIdeal == false) {
                 indicePivot[1] = selectEntryValue(tabelaSimplex);//coluna do pivot
@@ -31,23 +55,30 @@ public class Projeto_LAPR1 {
                 tabelaSimplex = pivoting(tabelaSimplex, indicePivot);
                 numIter++;
             }else{
-            
                 write.format("%s", "Esta é a solução ótima.");
             }
 
         } while (isIdeal == false);
         write.close();
         
-        escreverOutputToConsol(tabelaSimplex, base, header, inputFile, numIter, valoresDaSolucao);
+        escreverOutputToConsol(tabelaSimplex, base, header, input_File, numIter, valoresDaSolucao);
 
     }
-
+/**
+ * Conta quantas linhas tem o ficheiro.
+ * 
+ * 
+ * @param args
+ * @return número de linhas do ficheiro
+ * @throws FileNotFoundException 
+ */
     public static int numLinhasFicheiro(String[] args) throws FileNotFoundException {
 
         int nLinhas = 0;
-        String linha, nomeFicheiro = "input.txt";
+        String linha;
 
-        Scanner fileIn = new Scanner(new File(nomeFicheiro));
+     // Scanner fileIn = new Scanner(new File(args[0]));
+        Scanner fileIn = new Scanner(new File("input.txt"));
 
         while (fileIn.hasNext()) {
 
@@ -62,12 +93,20 @@ public class Projeto_LAPR1 {
 
         return nLinhas;
     }
-
+/**
+ * 
+ * 
+ * @param tabelaSimplex
+ * @param inputFile
+ * @param header
+ * @param base
+ * @return um vetor de doubles com a solução admissível atual
+ */
     public static double[] extrairSolucaoAtual(double[][] tabelaSimplex, String[] inputFile, String[] header, String[] base) {
 
-        double[] valoresDaSolucao = new double[header.length];
+        double[] valoresDaSolucao = new double[header.length-1];
 
-        for (int i = 0; i < header.length; i++) {
+        for (int i = 0; i < header.length-1; i++) {
             for (int j = 1; j < base.length; j++) {
                 if (header[i].equals(base[j])) {
                     valoresDaSolucao[i] = tabelaSimplex[j][tabelaSimplex[0].length - 1];
@@ -89,18 +128,18 @@ public class Projeto_LAPR1 {
         }
 
         for (int i = 0; i < header.length; i++) {
-            write.format("%6s |", header[i]);
+            write.format("%-7s |", header[i]);
         }
         write.format("%n");
 
         for (int i = 0; i < tabelaSimplex.length; i++) {
             for (int j = 0; j < tabelaSimplex[0].length; j++) {
 
-                write.format("%6.1f |", tabelaSimplex[i][j]);
+                write.format("%-7.1f |", tabelaSimplex[i][j]);
 
             }
 
-            write.format("%s", base[i]);
+            //write.format("%s", base[i]);
 
             write.format("%n");
         }
@@ -109,12 +148,12 @@ public class Projeto_LAPR1 {
         write.format("%s%n%s%n", "Solução admissível atual:", "Valor de "+inputFile[0].substring(0,1).toUpperCase()+"= "+tabelaSimplex[0][tabelaSimplex[0].length-1]);
         
         
-        for (int i = 0; i < header.length; i++) {
+        for (int i = 0; i < header.length-1; i++) {
 
             if (i == 0) {
                 write.format("(%s, ", header[i]);
             } else {
-                if (i != header.length - 1) {
+                if (i != header.length - 2) {
 
                     write.format("%s, ", header[i]);
                 } else {
@@ -124,12 +163,12 @@ public class Projeto_LAPR1 {
         }
         
 
-        for (int i = 0; i < inputFile.length; i++) {
+        for (int i = 0; i < valoresDaSolucao.length; i++) {
 
             if (i == 0) {
                 write.format("(%s, ", valoresDaSolucao[i]);
             } else {
-                if (i != inputFile.length - 1) {
+                if (i != valoresDaSolucao.length - 1) {
 
                     write.format("%s, ", valoresDaSolucao[i]);
                 } else {
@@ -151,18 +190,18 @@ public class Projeto_LAPR1 {
         }
 
         for (int i = 0; i < header.length; i++) {
-            out.format("%6s |", header[i]);
+            out.format("%-7s |", header[i]);
         }
         out.format("%n");
 
         for (int i = 0; i < tabelaSimplex.length; i++) {
             for (int j = 0; j < tabelaSimplex[0].length; j++) {
 
-                out.format("%6.1f |", tabelaSimplex[i][j]);
+                out.format("%-7.1f |", tabelaSimplex[i][j]);
 
             }
 
-            out.format("%s", base[i]);
+            //out.format("%s", base[i]);
 
             out.format("%n");
         }
@@ -171,12 +210,12 @@ public class Projeto_LAPR1 {
         out.format("%s%n%s%n", "Solução ótima:", "Valor de "+inputFile[0].substring(0,1).toUpperCase()+"= "+tabelaSimplex[0][tabelaSimplex[0].length-1]);
         
         
-        for (int i = 0; i < header.length; i++) {
+        for (int i = 0; i < header.length-1; i++) {
 
             if (i == 0) {
                 out.format("(%s, ", header[i]);
             } else {
-                if (i != header.length - 1) {
+                if (i != header.length - 2) {
 
                     out.format("%s, ", header[i]);
                 } else {
@@ -186,12 +225,12 @@ public class Projeto_LAPR1 {
         }
         
 
-        for (int i = 0; i < inputFile.length; i++) {
+        for (int i = 0; i < valoresDaSolucao.length; i++) {
 
             if (i == 0) {
                 out.format("(%s, ", valoresDaSolucao[i]);
             } else {
-                if (i != inputFile.length - 1) {
+                if (i != valoresDaSolucao.length - 1) {
 
                     out.format("%s, ", valoresDaSolucao[i]);
                 } else {
@@ -237,9 +276,10 @@ public class Projeto_LAPR1 {
     public static void lerFicheiroInput(String[] inputFile, String[] args) throws FileNotFoundException {
 
         int nLinhas = 0;
-        String linha, nomeFicheiro = "input.txt";
+        String linha;
 
-        Scanner fileIn = new Scanner(new File(nomeFicheiro));
+     // Scanner fileIn = new Scanner(new File(args[0]));
+        Scanner fileIn = new Scanner(new File("input.txt"));
 
         while (fileIn.hasNext()) {
 
@@ -446,7 +486,7 @@ public class Projeto_LAPR1 {
         return matrizCondens;
     }
 
-    public static boolean verificarifIdeal(double[][] tabelaSimplex) {
+    public static boolean verificar_if_Ideal(double[][] tabelaSimplex) {
 
         for (int i = 0; i < tabelaSimplex[0].length - 1; i++) {
             if (tabelaSimplex[0][i] < 0) {
